@@ -1,0 +1,146 @@
+openapi: '3.0.3'
+info:
+  title: Prices API
+  version: '1.0.0'
+  description: |
+    Prices API.
+
+    ### Feature:
+    * Get products
+
+servers:
+  - url: https://localhost:9092
+    description: Base url for the Prices API
+
+tags:
+  - name: /prices
+    description: Operations related to prices
+
+paths:
+  /api/v1/prices:
+    get:
+      summary: Get prices
+      operationId: getPrices
+      tags:
+        - /prices
+      parameters:
+        - name: brandId
+          in: query
+          required: true
+          description: Brand/chain identifier
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+        - name: productId
+          in: query
+          required: true
+          description: Product identifier
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 35455
+        - name: applicationDate
+          in: query
+          required: true
+          description: Point in time the price must apply at, ISO-8601 local date-time
+          schema:
+            type: string
+            format: date-time
+          example: "2020-06-14T16:00:00"
+      responses:
+        "200":
+          description: Applicable price found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceResponse"
+              example:
+                productId: 35455
+                brandId: 1
+                priceList: 2
+                startDate: "2020-06-14T15:00:00"
+                endDate: "2020-06-14T18:30:00"
+                price: "25.45"
+                currency: "EUR"
+        "400":
+          description: Invalid or missing request parameters
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                missingParam:
+                  summary: Missing required parameter
+                  value:
+                    title: Missing request parameter
+                    status: 400
+                    detail: "Required parameter 'productId' is not present."
+                malformedDate:
+                  summary: Malformed applicationDate
+                  value:
+                    title: Invalid parameter type
+                    status: 400
+                    detail: "Parameter 'applicationDate' has an invalid value 'not-a-date'; expected type LocalDateTime"
+                nonPositiveId:
+                  summary: brandId/productId not positive
+                  value:
+                    title: Invalid request parameters
+                    status: 400
+                    detail: "getApplicablePrice.brandId: must be greater than 0"
+        "404":
+          description: No price applies for the given brand/product/date combination
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              example:
+                title: Price not found
+                status: 404
+                detail: "No applicable price found for brandId=1, productId=35455, applicationDate=2019-01-01T00:00"
+
+components:
+  schemas:
+    PriceResponse:
+      type: object
+      description: Price information for a product
+      properties:
+        productId:
+          type: integer
+          format: int64
+          example: 123456
+        brandId:
+          type: integer
+          format: int64
+          example: 1
+        priceList:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          description: Start date of the price validity period.
+          format: date-time
+        endDate:
+          type: string
+          description: End date of the price validity period.
+          format: date-time
+        price:
+          type: string
+          format: decimal
+          example: "25.45"
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          example: "EUR"
+    ProblemDetail:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
